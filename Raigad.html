@@ -29,6 +29,7 @@
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
         <div class="container">
             <a href="index.html"><img src="logo.jpeg" alt="Maharaja Travels Logo" class="logo"></a>
+            <span class="logo-text">maharaja travels</span>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -433,7 +434,22 @@
             </div>
         </div>
     </div>
-
+     <!-- Offer Applied Modal -->
+    <div class="modal fade" id="offerAppliedModal" tabindex="-1" aria-labelledby="offerAppliedModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-md modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="offerAppliedModalLabel">Offer Applied!</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <h4>🎉 Your offer has been successfully applied! 🎉</h4>
+                    <p class="lead">Enjoy your discounted price on the Munnar trip.</p>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Continue Booking</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.getElementById('year').textContent = new Date().getFullYear();
