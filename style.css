@@ -362,4 +362,25 @@ footer p {
     }
 }
 
+.logo-text {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a237e;
+    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
+    text-transform: capitalize;
+}
+
+/* Date input enhancement */
+.modal-body input[type="date"].form-control {
+    font-size: 1.1rem;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.modal-body input[type="date"].form-control:hover {
+    border-color: #27ae60;
+    box-shadow: 0 0 6px rgba(39, 174, 96, 0.5);
+}
+
 
