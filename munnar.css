@@ -713,5 +713,16 @@ footer p {
 
     .modal-body .btn-secondary {
         margin-left: 0;
+
+.logo-text {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a237e;
+    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
+    text-transform: capitalize;
+}
     }
 }
+
