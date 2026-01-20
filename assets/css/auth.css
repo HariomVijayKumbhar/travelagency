@@ -2,9 +2,9 @@
 :root {
   --primary-color: #e67e22; /* Maharaja Orange */
   --secondary-color: #2c3e50;
-  --glass-bg: rgba(255, 255, 255, 0.95);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.5);
-  --shadow-lg: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  --glass-bg: var(--card-bg);
+  --glass-border: 1px solid var(--border-color);
+  --shadow-lg: var(--card-shadow);
 }
 
 .auth-modal .modal-content {
@@ -60,12 +60,9 @@
 .form-floating-custom input {
   width: 100%;
   padding: 15px;
-  border: 2px solid #eee;
-  border-radius: 12px;
-  outline: none;
-  transition: all 0.3s ease;
-  font-size: 1rem;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--input-bg);
+  color: var(--input-text);
+  border: 1px solid var(--border-color);
 }
 
 .form-floating-custom input:focus {
@@ -78,9 +75,10 @@
   left: 15px;
   top: 50%;
   transform: translateY(-50%);
-  background: white;
+  background: var(--card-bg);
   padding: 0 5px;
-  color: #999;
+  color: var(--text-color);
+  opacity: 0.7;
   transition: all 0.2s ease;
   pointer-events: none;
 }
@@ -149,8 +147,8 @@
 
 /* Nav Profile Picture */
 .nav-avatar {
-  width: 32px;
-  height: 32px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   object-fit: cover;
   margin-right: 8px;
