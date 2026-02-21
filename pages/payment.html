@@ -3,27 +3,146 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Payment - Maharaja Travels Agency</title>
+    <title>Secure Payment - Maharaja Travels Agency</title>
     <link rel="icon" href="../assets/images/logo.jpeg" type="image/jpeg" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="../assets/css/style.css" />
     <link rel="stylesheet" href="../assets/css/auth.css">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-accent: #6366f1;
+            --secondary-accent: #a855f7;
+            --success-color: #10b981;
+            --bg-dark: #0f172a;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .navbar {
+            background: white !important;
+            padding: 1rem 0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .payment-card {
+            border: none;
+            border-radius: 24px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            border-radius: 24px;
+            padding: 2rem;
+            position: sticky;
+            top: 2rem;
+        }
+
+        .nav-tabs {
+            border: none;
+            background: #f1f5f9;
+            padding: 6px;
+            border-radius: 14px;
+            margin-bottom: 2rem;
+        }
+
+        .nav-tabs .nav-link {
+            border: none;
+            border-radius: 10px;
+            color: #64748b;
+            font-weight: 500;
+            padding: 10px 20px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-tabs .nav-link.active {
+            background: white;
+            color: var(--primary-accent);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-control {
+            border-radius: 12px;
+            padding: 12px 16px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        .form-control:focus {
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+            border-color: var(--primary-accent);
+        }
+
+        .btn-pay {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            border: none;
+            border-radius: 14px;
+            padding: 16px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .btn-pay:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.2);
+            color: white;
+        }
+
+        .offer-item {
+            cursor: pointer;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .offer-item:hover {
+            border-color: var(--primary-accent);
+            background: rgba(99, 102, 241, 0.02);
+        }
+
+        .offer-item.active {
+            border-color: var(--primary-accent);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .offer-item.active::after {
+            content: "\f058";
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: var(--primary-accent);
+        }
+
+        .discount-badge {
+            background: rgba(16, 185, 129, 0.1);
+            color: #059669;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <nav class="navbar navbar-expand-lg">
         <div class="container">
-            <a class="navbar-brand" href="../index.html">
-                <img src="../assets/images/logo.jpeg" alt="Maharaja Travels Logo" class="logo" />
-                <span class="logo-text">Maharaja Travels</span>
+            <a class="navbar-brand d-flex align-items-center" href="../index.html">
+                <img src="../assets/images/logo.jpeg" alt="Logo" class="logo me-2 rounded-circle" style="width: 40px; height: 40px;" />
+                <span class="logo-text fw-bold text-dark">Maharaja Travels</span>
             </a>
-            <div class="d-flex align-items-center">
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
-                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-            </div>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link" href="../index.html">Home</a></li>
@@ -34,102 +153,159 @@
     </nav>
 
     <main class="container my-5">
-        <h2 class="text-center mb-4">Payment Details</h2>
-        
-        <!-- Order Summary -->
-        <div class="card mb-4 mx-auto" style="max-width: 600px; border-color: #27ae60;">
-            <div class="card-header text-white" style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);">
-                <h5 class="mb-0">Order Summary</h5>
-            </div>
-            <div class="card-body">
-                <div class="d-flex justify-content-between mb-2">
-                    <span>Package:</span>
-                    <strong id="summaryPackage">Loading...</strong>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span>Travelers:</span>
-                    <strong id="summaryTravelers">0</strong>
-                </div>
-                <hr>
-                <div class="d-flex justify-content-between">
-                    <span class="h5">Total Amount:</span>
-                    <strong class="h5 text-success" id="summaryTotal">₹0</strong>
-                </div>
-            </div>
-        </div>
+        <div class="row g-5">
+            <!-- Left Column: Payment Methods & Offers -->
+            <div class="col-lg-7">
+                <div class="card payment-card p-4 mb-4">
+                    <h4 class="fw-bold mb-4">Select Payment Method</h4>
+                    <ul class="nav nav-tabs nav-fill" id="paymentTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="card-tab" data-bs-toggle="tab" data-bs-target="#card" type="button" role="tab">
+                                <i class="fas fa-credit-card me-2"></i>Card
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="upi-tab" data-bs-toggle="tab" data-bs-target="#upi" type="button" role="tab">
+                                <i class="fas fa-mobile-alt me-2"></i>UPI / QR
+                            </button>
+                        </li>
+                    </ul>
 
-        <div class="card shadow-sm mb-4" style="max-width: 600px; margin: 0 auto;">
-            <div class="card-header bg-white">
-                <ul class="nav nav-tabs card-header-tabs" id="paymentTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="card-tab" data-bs-toggle="tab" data-bs-target="#card" type="button" role="tab" aria-selected="true">Credit/Debit Card</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="upi-tab" data-bs-toggle="tab" data-bs-target="#upi" type="button" role="tab" aria-selected="false">UPI / QR Code</button>
-                    </li>
-                </ul>
-            </div>
-            <div class="card-body">
-                <div class="tab-content" id="paymentTabsContent">
-                    <!-- Card Payment Form -->
-                    <div class="tab-pane fade show active" id="card" role="tabpanel" aria-labelledby="card-tab">
-                        <form id="paymentForm">
-                            <div class="mb-3">
-                                <label for="cardName" class="form-label">Name on Card</label>
-                                <input type="text" class="form-control" id="cardName" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="cardNumber" class="form-label">Card Number</label>
-                                <input type="text" class="form-control" id="cardNumber" placeholder="0000 0000 0000 0000" maxlength="16" required>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="expiryDate" class="form-label">Expiry Date</label>
-                                    <input type="month" class="form-control" id="expiryDate" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="cvv" class="form-label">CVV</label>
-                                    <input type="text" class="form-control" id="cvv" placeholder="123" maxlength="4" required>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="billingAddress" class="form-label">Billing Address</label>
-                                <textarea class="form-control" id="billingAddress" rows="3" placeholder="Street, City, State, Zip" required></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100">Pay Now</button>
-                        </form>
-                    </div>
-
-                    <!-- UPI Payment Section -->
-                    <div class="tab-pane fade" id="upi" role="tabpanel" aria-labelledby="upi-tab">
-                        <div class="text-center py-3">
-                            <h5 class="mb-3">Scan to Pay</h5>
-                            <div class="border p-2 d-inline-block rounded mb-3 bg-light">
-                                <img id="upiQrCode" src="" alt="UPI QR Code" class="img-fluid" style="width: 200px; height: 200px;">
-                            </div>
-                            <p class="mb-2">Pay via any UPI App</p>
-                            <p class="text-muted small"><strong>Number:</strong> 7038948696</p>
-                            <p class="text-muted small">Amount will be auto-filled</p>
-                            
-                            <hr>
-                            
-                            <form id="upiForm">
+                    <div class="tab-content" id="paymentTabsContent">
+                        <!-- Card Payment -->
+                        <div class="tab-pane fade show active" id="card" role="tabpanel">
+                            <form id="paymentForm">
                                 <div class="mb-3">
-                                    <label for="upiId" class="form-label">Or enter UPI Transaction ID (after paying)</label>
-                                    <input type="text" class="form-control" id="upiId" placeholder="e.g. 123456789012" required>
+                                    <label class="form-label small fw-bold text-secondary text-uppercase">Cardholder Name</label>
+                                    <input type="text" class="form-control" id="cardName" placeholder="Full Name" required>
                                 </div>
-                                <button type="submit" class="btn btn-success w-100">Confirm Payment</button>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold text-secondary text-uppercase">Card Number</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0"><i class="far fa-credit-card text-muted"></i></span>
+                                        <input type="text" class="form-control border-start-0" id="cardNumber" placeholder="0000 0000 0000 0000" maxlength="16" required>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6 mb-3">
+                                        <label class="form-label small fw-bold text-secondary text-uppercase">Expiry</label>
+                                        <input type="month" class="form-control" id="expiryDate" required>
+                                    </div>
+                                    <div class="col-6 mb-3">
+                                        <label class="form-label small fw-bold text-secondary text-uppercase">CVV</label>
+                                        <input type="text" class="form-control" id="cvv" placeholder="123" maxlength="4" required>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-pay w-100 mt-3" id="cardPayBtn">Pay Now</button>
                             </form>
                         </div>
+
+                        <!-- UPI Payment -->
+                        <div class="tab-pane fade" id="upi" role="tabpanel">
+                            <div class="text-center py-4">
+                                <div class="qr-container p-3 bg-white border rounded-4 d-inline-block mb-4">
+                                    <img id="upiQrCode" src="" alt="Scan to pay" style="width: 200px; height: 200px;">
+                                </div>
+                                <p class="mb-1 fw-bold">Scan with any UPI App</p>
+                                <p class="text-muted small">Merchant: Maharaja Travels</p>
+                                <div class="bg-light p-3 rounded-3 mb-4">
+                                    <span class="text-muted">UPI ID:</span> <span class="fw-bold">7038948696@upi</span>
+                                </div>
+                                <form id="upiForm">
+                                    <div class="mb-3 text-start">
+                                        <label class="form-label small fw-bold text-secondary text-uppercase">Transaction ID</label>
+                                        <input type="text" class="form-control" id="upiId" placeholder="Enter 12-digit Ref No." required>
+                                    </div>
+                                    <button type="submit" class="btn btn-pay w-100" id="upiPayBtn">Verify & Confirm</button>
+                                </form>
+                            </div>
+                        </div>
                     </div>
+                </div>
+
+                <!-- Offers Selection Section -->
+                <div class="card payment-card p-4">
+                    <h5 class="fw-bold mb-3">Available Offers</h5>
+                    <div id="offersList" class="row g-3">
+                        <!-- Offers will be injected here -->
+                        <div class="col-12">
+                            <div class="offer-item p-3" data-offer-id="SUMMER20" data-discount="20">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1 fw-bold">Summer Bliss</h6>
+                                        <p class="text-muted small mb-0">Get 20% off on your current booking</p>
+                                    </div>
+                                    <span class="discount-badge">20% OFF</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="offer-item p-3" data-offer-id="EARLYBIRD" data-discount="15">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1 fw-bold">Early Explorer</h6>
+                                        <p class="text-muted small mb-0">Get 15% off for planning ahead</p>
+                                    </div>
+                                    <span class="discount-badge">15% OFF</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="offer-item p-3" data-offer-id="GROUP25" data-discount="25">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1 fw-bold">Group Adventure</h6>
+                                        <p class="text-muted small mb-0">Get 25% off for 4+ travelers</p>
+                                    </div>
+                                    <span class="discount-badge">25% OFF</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Summary -->
+            <div class="col-lg-5">
+                <div class="summary-card">
+                    <h4 class="fw-bold mb-4">Order Summary</h4>
+                    <div class="d-flex justify-content-between mb-3 opacity-75">
+                        <span>Package Name</span>
+                        <span id="summaryPackage" class="fw-medium">Luxury Package</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3 opacity-75">
+                        <span>Travelers</span>
+                        <span id="summaryTravelers" class="fw-medium">2 Persons</span>
+                    </div>
+                    <hr class="my-4 border-secondary opacity-25">
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Base Amount</span>
+                        <span id="baseAmount" class="fw-medium">₹0</span>
+                    </div>
+                    <div id="offerRow" class="d-flex justify-content-between mb-2 text-success d-none">
+                        <span>Offer Discount (<span id="appliedOfferName">None</span>)</span>
+                        <span id="discountAmount">-₹0</span>
+                    </div>
+                    
+                    <hr class="my-4 border-secondary opacity-25">
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="h5 fw-bold mb-0">Total Amount</span>
+                        <span class="h4 fw-bold mb-0 text-white" id="summaryTotal">₹0</span>
+                    </div>
+                    
+                    <p class="mt-4 small opacity-50 text-center">
+                        <i class="fas fa-lock me-1"></i> SSL Encrypted Payment
+                    </p>
                 </div>
             </div>
         </div>
     </main>
 
-    <footer class="py-4 bg-dark text-white text-center">
+    <footer class="py-4 text-center text-muted border-top">
         <div class="container">
-            <p>&copy; 2025 Maharaja Travels Agency. All Rights Reserved.</p>
+            <p class="small mb-0">&copy; 2025 Maharaja Travels Agency. All Rights Reserved.</p>
         </div>
     </footer>
 

@@ -3,22 +3,6 @@
  * Handles Authentication, Booking, Search, and UI Interactions
  */
 
-document.addEventListener("DOMContentLoaded", () => {
-    // Initialize required modules
-    try { 
-        Database.init(); 
-        DB.init().then(() => {
-            try { Auth.init(); } catch (e) { console.error("Auth Init Failed:", e); }
-            try { Search.init(); } catch (e) { console.error("Search Init Failed:", e); }
-            try { Booking.init(); } catch (e) { console.error("Booking Init Failed:", e); }
-            try { Payment.init(); } catch (e) { console.error("Payment Init Failed:", e); }
-            try { Profile.init(); } catch (e) { console.error("Profile Init Failed:", e); }
-            try { Forms.init(); } catch (e) { console.error("Forms Init Failed:", e); }
-            try { UI.init(); } catch (e) { console.error("UI Init Failed:", e); }
-        }).catch(err => console.error("DB Init error:", err));
-    } catch (e) { console.error("Database Init Failed:", e); }
-});
-
 // --- Database Module ---
 const Database = {
     init: function() {
@@ -56,39 +40,19 @@ const Database = {
     }
 };
 
-// --- Modal Manager (Removed - Using Dedicated Pages) ---
-const ModalManager = {
-    init: function() {
-        // No longer injecting auth modals.
-        // We can keep this if we want to inject other modals later, but for now Auth is page-based.
-        // Checking for auth css is still good if key styles are shared.
-        if (!document.getElementById('auth-css')) {
-            const link = document.createElement('link');
-            link.id = 'auth-css';
-            link.rel = 'stylesheet';
-            link.href = window.location.pathname.includes('/pages/') ? '../assets/css/auth.css' : 'assets/css/auth.css';
-            document.head.appendChild(link);
-        }
-    }
-};
-
 // --- Authentication Module ---
 const Auth = {
     init: function () {
-        // Run updateUI immediately to set initial state
         this.updateUI();
         this.bindEvents();
     },
 
     bindEvents: function () {
-        // Delegate events since forms are dynamic
         document.body.addEventListener('submit', (e) => {
-            // Handle Login Page Form
             if (e.target && e.target.id === 'loginPageForm') {
                 e.preventDefault();
                 this.login();
             }
-            // Handle Register Page Form
             if (e.target && e.target.id === 'registerPageForm') {
                 e.preventDefault();
                 this.register();
@@ -96,20 +60,18 @@ const Auth = {
         });
 
         document.addEventListener("click", (e) => {
-            // Logout
             if (e.target && (e.target.id === "logoutBtn" || e.target.id === "logoutBtnNav")) {
                 e.preventDefault();
                 this.logout();
             }
-            // Navigate to History
             if (e.target && e.target.id === "historyBtn") {
                 e.preventDefault();
-                Payment.showHistory(); // Use Payment module to show history
+                Payment.showHistory();
             }
         });
     },
 
-    register: function () {
+    register: async function () {
         const name = document.getElementById("registerName").value;
         const email = document.getElementById("registerEmail").value;
         const password = document.getElementById("registerPassword").value;
@@ -120,50 +82,67 @@ const Auth = {
             return;
         }
 
-        if (Database.Users.findByEmail(email)) {
-             alert("User with this email already exists.");
-             return;
-        }
+        try {
+            const response = await fetch('http://localhost:3000/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password })
+            });
 
-        // Create User
-        const newUser = Database.Users.create({ name, email, password });
-        
-        // Auto Login
-        localStorage.setItem("currentUser", JSON.stringify(newUser));
-        
-        alert("Registration Successful! Welcome to Maharaja Travels.");
-        
-        // Redirect to Profile
-        window.location.href = "profile.html";
+            const result = await response.json();
+
+            if (response.ok) {
+                alert("Registration Successful! Welcome to Maharaja Travels.");
+                window.location.href = "login.html";
+            } else {
+                alert("Registration failed: " + result.error);
+            }
+        } catch (error) {
+            console.error("Registration error:", error);
+            alert("An error occurred during registration. Please check if the server is running.");
+        }
     },
 
-    login: function () {
+    login: async function () {
         const email = document.getElementById("loginEmail").value;
         const password = document.getElementById("loginPassword").value;
 
-        const user = Database.Users.verify(email, password);
+        try {
+            const response = await fetch('http://localhost:3000/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
 
-        if (user) {
-            localStorage.setItem("currentUser", JSON.stringify(user));
-            alert(`Welcome back, ${user.name}!`);
-            
-            // Redirect to Home
-            window.location.href = "../index.html";
-        } else {
-            alert("Invalid email or password. Please try again.");
+            const result = await response.json();
+
+            if (response.ok) {
+                localStorage.setItem("currentUser", JSON.stringify({
+                    name: result.user.user_metadata.full_name || result.user.email,
+                    email: result.user.email,
+                    id: result.user.id
+                }));
+                localStorage.setItem("supabaseSession", JSON.stringify(result.session));
+                
+                alert(`Welcome back, ${result.user.user_metadata.full_name || result.user.email}!`);
+                window.location.href = "../index.html";
+            } else {
+                alert("Login failed: " + result.error);
+            }
+        } catch (error) {
+            console.error("Login error:", error);
+            alert("An error occurred during login. Please check if the server is running.");
         }
     },
 
     logout: function () {
         if (confirm("Are you sure you want to logout?")) {
             localStorage.removeItem("currentUser");
-            
-            // If on profile page, redirect to home
             if (window.location.pathname.includes('profile.html')) {
                 window.location.href = "../index.html";
             } else {
-                this.updateUI(); // Update UI immediately instead of reload for smoother feel
-                window.location.reload(); // Reload to clear any specific state if needed
+                this.updateUI();
+                window.location.reload();
             }
         }
     },
@@ -178,32 +157,21 @@ const Auth = {
 
     updateUI: function () {
         const navList = document.querySelector(".navbar-nav");
-        // If on profile page, the nav structure is different/simplified, so we might skip or adapt
         if (!navList) return;
 
         const user = this.getCurrentUser();
-
-        // 1. Remove any existing User Dropdown (to avoid duplicates)
         const existingAuthItems = document.querySelectorAll(".auth-item");
-        // Don't remove if it is the static logout button on profile page
         if (!window.location.pathname.includes('profile.html')) {
              existingAuthItems.forEach((el) => el.remove());
         }
 
-        // 2. Select the Static Login/Register Links
-        // We use the class 'auth-link' which we added to index.html
         const staticLinks = document.querySelectorAll('.auth-link');
 
         if (user) {
-            // LOGGED IN STATE
-            
-            // Hide static links
             staticLinks.forEach(link => {
-                // Hide the parent list item (<li>)
                 if(link.parentElement) link.parentElement.style.display = 'none';
             });
 
-            // Add User Dropdown (Only on non-profile pages)
             if (!window.location.pathname.includes('profile.html')) {
                 const userItem = `
                     <li class="nav-item auth-item dropdown">
@@ -212,7 +180,6 @@ const Auth = {
                             ${user.name}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                            <!-- Removed 'My Profile' link as per request -->
                             <li><a class="dropdown-item" href="#" id="logoutBtn">Logout</a></li>
                         </ul>
                     </li>
@@ -221,14 +188,9 @@ const Auth = {
             }
             
         } else {
-            // LOGGED OUT STATE
-            
-            // Show static links
             staticLinks.forEach(link => {
-                if(link.parentElement) link.parentElement.style.display = ''; // Reset to default (block/list-item)
+                if(link.parentElement) link.parentElement.style.display = '';
             });
-            
-            // If on profile page but logged out, redirect to login
             if (window.location.pathname.includes('profile.html')) {
                 window.location.href = "login.html";
             }
@@ -240,13 +202,11 @@ const Auth = {
 const Profile = {
     init: function() {
         if (!window.location.pathname.includes('profile.html')) return;
-        
         const user = Auth.getCurrentUser();
         if (!user) {
             window.location.href = "login.html";
             return;
         }
-
         this.loadUserData(user);
         this.loadBookings(user.email);
     },
@@ -254,7 +214,6 @@ const Profile = {
     loadUserData: function(user) {
         const nameEl = document.getElementById('profileName');
         const emailEl = document.getElementById('profileEmail');
-        
         if(nameEl) nameEl.textContent = user.name;
         if(emailEl) emailEl.textContent = user.email;
     },
@@ -263,7 +222,6 @@ const Profile = {
         Database.Bookings.getByUser(email).then(bookings => {
             const tbody = document.getElementById('profileBookingsBody');
             const noBookingsMsg = document.getElementById('noBookingsMsg');
-
             if (!tbody) return;
             tbody.innerHTML = '';
 
@@ -311,14 +269,11 @@ const Search = {
 
         if (searchInput && destinationsContainer) {
             const destinationCards = destinationsContainer.getElementsByClassName("col-lg-4");
-
             searchInput.addEventListener("input", function () {
                 const filter = this.value.toLowerCase();
-
                 Array.from(destinationCards).forEach(function (card) {
                     const title = card.querySelector(".destination-info h3").textContent.toLowerCase();
                     const description = card.querySelector(".destination-info p").textContent.toLowerCase();
-
                     if (title.includes(filter) || description.includes(filter)) {
                         card.style.display = "";
                     } else {
@@ -330,6 +285,25 @@ const Search = {
     },
 };
 
+// --- Offer Module ---
+const Offer = {
+    init: function() {
+        this.checkClaimedOffer();
+    },
+    checkClaimedOffer: function() {
+        const claimedOffer = JSON.parse(localStorage.getItem("claimedOffer"));
+        if (claimedOffer) {
+            console.log("Claimed Offer found:", claimedOffer);
+        }
+    },
+    getClaimedOffer: function() {
+        return JSON.parse(localStorage.getItem("claimedOffer"));
+    },
+    clearClaimedOffer: function() {
+        localStorage.removeItem("claimedOffer");
+    }
+};
+
 // --- Booking Module ---
 const Booking = {
     packagePrices: {
@@ -338,33 +312,43 @@ const Booking = {
         "Luxury Package": 18000,
         "Custom Package": 0,
     },
-    discountRate: 0.2,
+    discountRate: 0,
     isDiscountApplied: false,
+    appliedOffer: null,
 
     init: function () {
         this.bindEvents();
+        const claimed = Offer.getClaimedOffer();
+        if (claimed) {
+            this.appliedOffer = claimed;
+            this.discountRate = claimed.discount / 100;
+            this.isDiscountApplied = true;
+        }
     },
 
     bindEvents: function () {
-        // Book Now Buttons
         const buttons = document.querySelectorAll(".book-now");
         buttons.forEach((button) => {
             button.addEventListener("click", (e) => {
                 e.preventDefault();
-
-                // Check for Auth preference (Optional: Force login? No, keep guest active as per user previous approval)
-                // But we can autofill if logged in
+                if (!Auth.isLoggedIn()) {
+                    alert("Please login to book a trip.");
+                    window.location.href = window.location.pathname.includes('/pages/') ? 'login.html' : 'pages/login.html';
+                    return;
+                }
                 const user = Auth.getCurrentUser();
-
-                this.isDiscountApplied = false;
+                const claimed = Offer.getClaimedOffer();
+                if (claimed) {
+                    this.appliedOffer = claimed;
+                    this.discountRate = claimed.discount / 100;
+                    this.isDiscountApplied = true;
+                }
                 const packageName = e.target.getAttribute("data-package");
                 const packageSelect = document.getElementById("package");
                 if (packageSelect) {
                     packageSelect.value = packageName;
                     this.updatePrice();
                 }
-                
-                // Autofill or Clear
                 const nameInput = document.getElementById("name");
                 const emailInput = document.getElementById("email");
                 if (nameInput) nameInput.value = user ? user.name : "";
@@ -374,45 +358,19 @@ const Booking = {
                 if (bookingModalEl) {
                     const bookingModal = new bootstrap.Modal(bookingModalEl);
                     bookingModal.show();
-                } else {
-                    console.error("Booking modal ID missing");
                 }
             });
         });
 
         const packageSelect = document.getElementById("package");
         const travelersInput = document.getElementById("travelers");
-
         if (packageSelect) packageSelect.addEventListener("change", () => this.updatePrice());
         if (travelersInput) travelersInput.addEventListener("input", () => this.updatePrice());
 
-        // Offer Application
-        const applyOfferBtn = document.getElementById("applyOfferBtn");
-        if (applyOfferBtn) {
-            applyOfferBtn.addEventListener("click", () => {
-                this.isDiscountApplied = true;
-                this.updatePrice();
-
-                const offerModalEl = document.getElementById("offerModal");
-                if (offerModalEl) {
-                    const offerModal = bootstrap.Modal.getInstance(offerModalEl);
-                    if (offerModal) offerModal.hide();
-                }
-
-                const offerAppliedModalEl = document.getElementById("offerAppliedModal");
-                if (offerAppliedModalEl) {
-                    const offerAppliedModal = new bootstrap.Modal(offerAppliedModalEl);
-                    offerAppliedModal.show();
-                }
-            });
-        }
-
-        // Booking Submission
         const bookingForm = document.getElementById("bookingForm");
         if (bookingForm) {
             bookingForm.addEventListener("submit", (e) => {
                 e.preventDefault();
-
                 const packageSelect = document.getElementById("package");
                 const travelersInput = document.getElementById("travelers");
                 const totalSpan = document.getElementById("totalAmount");
@@ -425,33 +383,22 @@ const Booking = {
                     package: packageSelect.value,
                     travelers: travelersInput.value,
                     total: totalSpan.textContent,
+                    baseTotal: (this.packagePrices[packageSelect.value] || 0) * (parseInt(travelersInput.value) || 0),
                     date: new Date().toISOString(),
                     status: 'Pending Payment',
-                    userEmail: emailInput.value // Default to input email
+                    userEmail: emailInput.value,
+                    appliedOffer: this.appliedOffer
                 };
 
-                // Link to user account if logged in
                 const user = Auth.getCurrentUser();
-                if (user) {
-                    bookingData.userEmail = user.email;
-                }
+                if (user) bookingData.userEmail = user.email;
 
                 localStorage.setItem("pendingBooking", JSON.stringify(bookingData));
-
                 const bookingModal = bootstrap.Modal.getInstance(document.getElementById("bookingModal"));
                 if (bookingModal) bookingModal.hide();
 
                 const isPagesDir = window.location.pathname.includes('/pages/');
                 window.location.href = isPagesDir ? 'payment.html' : 'pages/payment.html';
-            });
-        }
-        
-         // Cancel Offer
-        const cancelOfferBtn = document.getElementById("cancelOfferBtn");
-        if (cancelOfferBtn) {
-            cancelOfferBtn.addEventListener("click", () => {
-                this.isDiscountApplied = false;
-                this.updatePrice();
             });
         }
     },
@@ -462,30 +409,32 @@ const Booking = {
         const packagePriceDiv = document.getElementById("packagePrice");
         const totalAmountSpan = document.getElementById("totalAmount");
         const originalTotalAmountSpan = document.getElementById("originalTotalAmount");
-        const cancelOfferBtn = document.getElementById("cancelOfferBtn");
+        const offerBadge = document.getElementById("offerBadge");
 
         if (!packageSelect || !travelersInput) return;
 
         const selectedPackage = packageSelect.value;
         const numTravelers = parseInt(travelersInput.value) || 0;
         const pricePerPerson = this.packagePrices[selectedPackage] || 0;
-
         if (packagePriceDiv) packagePriceDiv.textContent = "₹" + pricePerPerson.toLocaleString();
 
         let total = pricePerPerson * numTravelers;
 
-        if (this.isDiscountApplied) {
+        if (this.isDiscountApplied && this.appliedOffer) {
             const discountedTotal = total * (1 - this.discountRate);
             if (originalTotalAmountSpan) {
                 originalTotalAmountSpan.textContent = "₹" + total.toLocaleString();
                 originalTotalAmountSpan.classList.remove("d-none");
             }
-            if (totalAmountSpan) totalAmountSpan.textContent = "₹" + discountedTotal.toLocaleString();
-            if (cancelOfferBtn) cancelOfferBtn.classList.remove("d-none");
+            if (totalAmountSpan) totalAmountSpan.textContent = "₹" + Math.round(discountedTotal).toLocaleString();
+            if (offerBadge) {
+                offerBadge.textContent = `${this.appliedOffer.name} Applied (${this.appliedOffer.discount}%)`;
+                offerBadge.classList.remove("d-none");
+            }
         } else {
             if (originalTotalAmountSpan) originalTotalAmountSpan.classList.add("d-none");
             if (totalAmountSpan) totalAmountSpan.textContent = "₹" + total.toLocaleString();
-            if (cancelOfferBtn) cancelOfferBtn.classList.add("d-none");
+            if (offerBadge) offerBadge.classList.add("d-none");
         }
     },
 };
@@ -493,7 +442,7 @@ const Booking = {
 // --- Payment Module ---
 const Payment = {
     init: function() {
-        if(!document.getElementById('paymentTabsContent')) return;
+        if(!document.getElementById('card-tab')) return;
         this.loadOrderSummary();
         this.bindEvents();
     },
@@ -505,188 +454,146 @@ const Payment = {
             window.location.href = "../index.html";
             return;
         }
-
         document.getElementById('summaryPackage').textContent = pendingBooking.package;
-        document.getElementById('summaryTravelers').textContent = pendingBooking.travelers;
-        document.getElementById('summaryTotal').textContent = pendingBooking.total;
+        document.getElementById('summaryTravelers').textContent = `${pendingBooking.travelers} Persons`;
+        this.updatePaymentSummary(pendingBooking);
         
         const amount = pendingBooking.total.replace(/[^0-9.]/g, '');
         const upiId = '7038948696';
         const upiName = 'MaharajaTravels';
-        
         const upiData = `upi://pay?pa=${upiId}@upi&pn=${upiName}&am=${amount}&cu=INR`;
-        const encodedData = encodeURIComponent(upiData);
-        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodedData}`;
-        
+        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiData)}`;
         const qrImg = document.getElementById('upiQrCode');
         if(qrImg) qrImg.src = qrApiUrl;
+    },
+
+    updatePaymentSummary: function(booking) {
+        const baseAmountEl = document.getElementById('baseAmount');
+        const offerRow = document.getElementById('offerRow');
+        const appliedOfferName = document.getElementById('appliedOfferName');
+        const discountAmountEl = document.getElementById('discountAmount');
+        const summaryTotalEl = document.getElementById('summaryTotal');
+
+        const baseAmount = booking.baseTotal || 0;
+        let total = baseAmount;
+        if (baseAmountEl) baseAmountEl.textContent = "₹" + baseAmount.toLocaleString();
+
+        if (booking.appliedOffer) {
+            const discount = Math.round(baseAmount * (booking.appliedOffer.discount / 100));
+            total = baseAmount - discount;
+            if (offerRow) offerRow.classList.remove('d-none');
+            if (appliedOfferName) appliedOfferName.textContent = booking.appliedOffer.name;
+            if (discountAmountEl) discountAmountEl.textContent = "-₹" + discount.toLocaleString();
+            document.querySelectorAll('.offer-item').forEach(item => {
+                if(item.getAttribute('data-offer-id') === booking.appliedOffer.id) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        } else {
+            if (offerRow) offerRow.classList.add('d-none');
+            document.querySelectorAll('.offer-item').forEach(item => item.classList.remove('active'));
+        }
+        if (summaryTotalEl) summaryTotalEl.textContent = "₹" + Math.round(total).toLocaleString();
+        booking.total = "₹" + Math.round(total).toLocaleString();
+        localStorage.setItem('pendingBooking', JSON.stringify(booking));
     },
 
     bindEvents: function() {
         const paymentForm = document.getElementById("paymentForm");
         const upiForm = document.getElementById("upiForm");
-        
         if(paymentForm) {
             paymentForm.addEventListener("submit", (e) => {
                 e.preventDefault();
                 this.processPayment("Card");
             });
         }
-        
         if(upiForm) {
             upiForm.addEventListener("submit", (e) => {
                 e.preventDefault();
                 this.processPayment("UPI");
             });
         }
-        
-        const cardInput = document.getElementById('cardNumber');
-        if(cardInput) {
-            cardInput.addEventListener('input', (e) => {
-                e.target.value = e.target.value.replace(/\D/g, '').substring(0, 16);
-            });
-        }
-        
-        const cvvInput = document.getElementById('cvv');
-        if(cvvInput) {
-            cvvInput.addEventListener('input', (e) => {
-                e.target.value = e.target.value.replace(/\D/g, '').substring(0, 4);
-            });
-        }
 
-        // Use event delegation for history button as it might be dynamically added
-        document.addEventListener("click", (e) => {
-            if (e.target && e.target.id === "historyBtn") {
-                e.preventDefault();
-                this.showHistory();
+        const offerItems = document.querySelectorAll('.offer-item');
+        offerItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const pendingBooking = JSON.parse(localStorage.getItem('pendingBooking'));
+                const offerId = item.getAttribute('data-offer-id');
+                const discount = parseInt(item.getAttribute('data-discount'));
+                const name = item.querySelector('h6').textContent;
+                if (pendingBooking.appliedOffer && pendingBooking.appliedOffer.id === offerId) {
+                    delete pendingBooking.appliedOffer;
+                } else {
+                    pendingBooking.appliedOffer = { id: offerId, discount, name };
+                }
+                this.updatePaymentSummary(pendingBooking);
+            });
+        });
+
+        ['cardNumber', 'cvv', 'upiId'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) {
+                el.addEventListener('input', (e) => {
+                    e.target.value = e.target.value.replace(/\D/g, '');
+                });
             }
         });
     },
 
     processPayment: function(method) {
-        let submitBtn = (method === "Card") ? 
-            document.querySelector('#paymentForm button[type="submit"]') : 
-            document.querySelector('#upiForm button[type="submit"]');
-        
+        const submitBtn = method === "Card" ? document.getElementById('cardPayBtn') : document.getElementById('upiPayBtn');
+        if (!submitBtn) return;
         submitBtn.disabled = true;
         submitBtn.textContent = "Processing...";
 
         setTimeout(() => {
-            alert(`Payment Successful via ${method}! Your booking is confirmed.`);
-            
             const pendingBooking = JSON.parse(localStorage.getItem('pendingBooking'));
-
             if(pendingBooking) {
                 pendingBooking.status = 'Confirmed';
                 pendingBooking.paymentId = 'TXN' + Date.now();
                 pendingBooking.method = method;
                 pendingBooking.date = new Date().toLocaleDateString();
-                
-                // Use Database Module for persistence
                 Database.Bookings.add(pendingBooking);
-                
                 localStorage.removeItem('pendingBooking');
+                Offer.clearClaimedOffer();
             }
-
-            submitBtn.textContent = "Success!";
+            alert(`Payment Successful! Your journey with Maharaja Travels begins now.`);
             window.location.href = "../index.html";
         }, 2000);
-    },
-
-    showHistory: function() {
-        // Updated to act as a fallback logic, or used on specific pages
-        const user = Auth.getCurrentUser();
-
-        let historyModal = document.getElementById('historyModal');
-        if (!historyModal) {
-             const title = user ? "My Bookings" : "Guest Bookings";
-            const modalHTML = `
-            <div class="modal fade" id="historyModal" tabindex="-1">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">${title}</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="table-responsive">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>Date</th>
-                                            <th>Package</th>
-                                            <th>Travelers</th>
-                                            <th>Amount</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="historyTableBody"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-            document.body.insertAdjacentHTML('beforeend', modalHTML);
-            historyModal = document.getElementById('historyModal');
-        }
-
-        Database.Bookings.getByUser(user ? user.email : null).then(displayBookings => {
-            const tbody = document.getElementById('historyTableBody');
-            tbody.innerHTML = '';
-
-            if (displayBookings.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center">No bookings found.</td></tr>';
-            } else {
-                displayBookings.forEach(booking => {
-                    const row = `
-                        <tr>
-                            <td>${booking.date || '-'}</td>
-                            <td>${booking.package}</td>
-                            <td>${booking.travelers}</td>
-                            <td>${booking.total}</td>
-                            <td><span class="badge bg-success">${booking.status}</span></td>
-                        </tr>
-                    `;
-                    tbody.insertAdjacentHTML('beforeend', row);
-                });
-            }
-
-            const modal = new bootstrap.Modal(historyModal);
-            modal.show();
-        });
     }
 };
 
-// --- Forms Helper Module ---
-const Forms = {
-    init: function () {
-        const contactForms = document.querySelectorAll("section.contact-form form");
-        contactForms.forEach((form) => {
-            if (form.id === "bookingForm") return; 
-            if (form.id === "paymentForm") return; 
-            if (form.id === "loginForm") return;
-            if (form.id === "registerForm") return;
-
-            form.addEventListener("submit", (e) => {
-                e.preventDefault();
-                alert("Message Sent! We will get back to you soon.");
-                form.reset();
+// --- Update DOMContentLoaded ---
+document.addEventListener("DOMContentLoaded", () => {
+    try { 
+        Database.init(); 
+        DB.init().then(() => {
+            try { Auth.init(); } catch (e) {}
+            try { Offer.init(); } catch (e) {}
+            try { Search.init(); } catch (e) {}
+            try { Booking.init(); } catch (e) {}
+            try { Payment.init(); } catch (e) {}
+            try { Profile.init(); } catch (e) {}
+            try { UI.init(); } catch (e) {}
+            
+            const forms = document.querySelectorAll("form:not(#bookingForm):not(#paymentForm):not(#upiForm):not(#loginPageForm):not(#registerPageForm)");
+            forms.forEach(form => {
+                form.addEventListener("submit", (e) => {
+                    e.preventDefault();
+                    alert("Message Sent! We will get back to you soon.");
+                    form.reset();
+                });
             });
         });
-    },
-};
+    } catch (e) { console.error("Initialization Failed:", e); }
+});
 
 // --- UI Utility Module ---
 const UI = {
     init: function() {
-        this.updateYear();
-    },
-
-    updateYear: function () {
         const yearSpan = document.getElementById("year");
-        if (yearSpan) {
-            yearSpan.textContent = new Date().getFullYear();
-        }
+        if (yearSpan) yearSpan.textContent = new Date().getFullYear();
     }
 };

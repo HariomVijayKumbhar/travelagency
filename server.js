@@ -1,89 +1,107 @@
-const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
-const cors = require('cors');
-const path = require('path');
+require("dotenv").config();
+const express = require("express");
+const { createClient } = require("@supabase/supabase-js");
+const cors = require("cors");
+const path = require("path");
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the root and pages directories
+// Serve static files
 app.use(express.static(path.join(__dirname)));
-app.use('/pages', express.static(path.join(__dirname, 'pages')));
-app.use('/assets', express.static(path.join(__dirname, 'assets')));
+app.use("/pages", express.static(path.join(__dirname, "pages")));
+app.use("/assets", express.static(path.join(__dirname, "assets")));
 
-// Database Setup
-const dbPath = path.join(__dirname, 'database.sqlite');
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('Error opening database:', err.message);
-    } else {
-        console.log('Connected to the SQLite database.');
-        db.run(`CREATE TABLE IF NOT EXISTS bookings (
-            id TEXT PRIMARY KEY,
-            name TEXT,
-            email TEXT,
-            package TEXT,
-            travelers INTEGER,
-            total TEXT,
-            date TEXT,
-            status TEXT,
-            userEmail TEXT,
-            paymentId TEXT,
-            method TEXT
-        )`, (err) => {
-            if (err) {
-                console.error('Error creating table:', err.message);
-            }
-        });
-    }
+// Supabase Setup
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error("CRITICAL: Supabase URL or Key missing in .env file");
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// --- Auth Endpoints ---
+
+// Register
+app.post("/api/auth/register", async (req, res) => {
+  const { email, password, name } = req.body;
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { full_name: name },
+    },
+  });
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: "Registration successful", user: data.user });
 });
 
-// API Endpoints
+// Login
+app.post("/api/auth/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({
+    message: "Login successful",
+    session: data.session,
+    user: data.user,
+  });
+});
+
+// --- Booking Endpoints ---
 
 // Add a booking
-app.post('/api/bookings', (req, res) => {
-    const booking = req.body;
-    const sql = `INSERT INTO bookings (id, name, email, package, travelers, total, date, status, userEmail, paymentId, method) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    const params = [
-        booking.id, booking.name, booking.email, booking.package, 
-        booking.travelers, booking.total, booking.date, booking.status, 
-        booking.userEmail, booking.paymentId, booking.method
-    ];
+app.post("/api/bookings", async (req, res) => {
+  const booking = req.body;
 
-    db.run(sql, params, function(err) {
-        if (err) {
-            res.status(400).json({ error: err.message });
-            return;
-        }
-        res.json({ message: 'Booking saved', id: booking.id });
-    });
+  const { data, error } = await supabase.from("bookings").insert([
+    {
+      id: booking.id,
+      name: booking.name,
+      email: booking.email,
+      package: booking.package,
+      travelers: parseInt(booking.travelers),
+      total: booking.total,
+      date: booking.date,
+      status: booking.status,
+      user_email: booking.userEmail,
+      payment_id: booking.paymentId,
+      method: booking.method,
+    },
+  ]);
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: "Booking saved", data });
 });
 
 // Get bookings by email or all
-app.get('/api/bookings', (req, res) => {
-    const email = req.query.email;
-    let sql = "SELECT * FROM bookings";
-    let params = [];
+app.get("/api/bookings", async (req, res) => {
+  const email = req.query.email;
 
-    if (email) {
-        sql += " WHERE userEmail = ?";
-        params = [email];
-    }
+  let query = supabase.from("bookings").select("*");
+  if (email) {
+    query = query.eq("user_email", email);
+  }
 
-    db.all(sql, params, (err, rows) => {
-        if (err) {
-            res.status(400).json({ error: err.message });
-            return;
-        }
-        res.json(rows);
-    });
+  const { data, error } = await query;
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
 });
 
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
