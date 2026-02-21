@@ -24,12 +24,13 @@ if (!supabaseUrl || !supabaseKey) {
   console.error("CRITICAL: Supabase URL or Key missing in .env file");
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 // --- Auth Endpoints ---
 
 // Register
 app.post("/api/auth/register", async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
   const { email, password, name } = req.body;
 
   const { data, error } = await supabase.auth.signUp({
@@ -46,6 +47,7 @@ app.post("/api/auth/register", async (req, res) => {
 
 // Login
 app.post("/api/auth/login", async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
   const { email, password } = req.body;
 
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -65,6 +67,7 @@ app.post("/api/auth/login", async (req, res) => {
 
 // Add a booking
 app.post("/api/bookings", async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
   const booking = req.body;
 
   const { data, error } = await supabase.from("bookings").insert([
@@ -89,6 +92,7 @@ app.post("/api/bookings", async (req, res) => {
 
 // Get bookings by email or all
 app.get("/api/bookings", async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
   const email = req.query.email;
 
   let query = supabase.from("bookings").select("*");
@@ -102,6 +106,11 @@ app.get("/api/bookings", async (req, res) => {
   res.json(data);
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+// For Vercel, we export the app
+module.exports = app;
+
+if (process.env.NODE_ENV !== "production") {
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
+}
