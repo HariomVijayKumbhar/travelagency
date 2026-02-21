@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/HariomVijayKumbhar/travelagency#readme",
   "dependencies": {
-    "@supabase/supabase-js": "^2.95.3",
+    "@supabase/supabase-js": "^2.45.3",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1"

@@ -2,7 +2,7 @@
  * travelAgencyDB - API Client for SQL backend storage
  */
 const DB = {
-    baseUrl: 'http://localhost:3000/api',
+    baseUrl: '/api',
 
     init: function() {
         // No client-side init required for SQL backend, 
