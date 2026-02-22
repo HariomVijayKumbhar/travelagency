@@ -12,9 +12,14 @@ app.use(cors());
 app.use(express.json());
 
 // Serve static files
-app.use(express.static(path.join(__dirname)));
-app.use("/pages", express.static(path.join(__dirname, "pages")));
-app.use("/assets", express.static(path.join(__dirname, "assets")));
+app.use(express.static(process.cwd()));
+app.use("/pages", express.static(path.join(process.cwd(), "pages")));
+app.use("/assets", express.static(path.join(process.cwd(), "assets")));
+
+// Root handler to serve index.html
+app.get("/", (req, res) => {
+  res.sendFile(path.join(process.cwd(), "index.html"));
+});
 
 // Supabase Setup
 const supabaseUrl = process.env.SUPABASE_URL;
