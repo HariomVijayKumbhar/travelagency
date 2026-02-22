@@ -16,6 +16,11 @@ app.use(express.static(path.join(__dirname)));
 app.use("/pages", express.static(path.join(__dirname, "pages")));
 app.use("/assets", express.static(path.join(__dirname, "assets")));
 
+// Root handler
+app.get("/", (req, res) => {
+  res.send("Maharaja Travels API is running. Visit / to see the website.");
+});
+
 // Supabase Setup
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
