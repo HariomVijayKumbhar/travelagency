@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES auth.users ON DELETE CASCADE,
     full_name TEXT,
-    email TEXT,
+    email TEXT UNIQUE,
     avatar_url TEXT,
     phone TEXT,
     address TEXT,

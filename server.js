@@ -119,16 +119,23 @@ app.post("/api/profiles", async (req, res) => {
   if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
   const profile = req.body;
 
-  const { data, error } = await supabase.from("profiles").insert([
-    {
-      user_id: profile.userId || null,
-      full_name: profile.fullName,
-      email: profile.email,
-      avatar_url: profile.avatarUrl,
-      phone: profile.phone,
-      address: profile.address,
-    },
-  ]).select();
+  const { data, error } = await supabase
+    .from("profiles")
+    .upsert(
+      [
+        {
+          user_id: profile.userId || null,
+          full_name: profile.fullName,
+          email: profile.email,
+          avatar_url: profile.avatarUrl,
+          phone: profile.phone,
+          address: profile.address,
+          updated_at: new Date().toISOString(),
+        },
+      ],
+      { onConflict: "email" }
+    )
+    .select();
 
   if (error) return res.status(400).json({ error: error.message });
   res.json({ message: "Profile saved", data });
@@ -143,12 +150,13 @@ app.get("/api/profiles/:email", async (req, res) => {
     .from("profiles")
     .select("*")
     .eq("email", email)
-    .single();
+    .order("updated_at", { ascending: false })
+    .limit(1);
 
-  if (error && error.code !== "PGRST116") {
+  if (error) {
     return res.status(400).json({ error: error.message });
   }
-  res.json(data || null);
+  res.json(data?.[0] || null);
 });
 
 // Update profile
@@ -159,13 +167,19 @@ app.put("/api/profiles/:email", async (req, res) => {
 
   const { data, error } = await supabase
     .from("profiles")
-    .update({
-      full_name: profile.fullName,
-      avatar_url: profile.avatarUrl,
-      phone: profile.phone,
-      address: profile.address,
-    })
-    .eq("email", email)
+    .upsert(
+      [
+        {
+          email,
+          full_name: profile.fullName,
+          avatar_url: profile.avatarUrl,
+          phone: profile.phone,
+          address: profile.address,
+          updated_at: new Date().toISOString(),
+        },
+      ],
+      { onConflict: "email" }
+    )
     .select();
 
   if (error) return res.status(400).json({ error: error.message });
