@@ -74,10 +74,11 @@ app.post("/api/auth/login", async (req, res) => {
 app.post("/api/bookings", async (req, res) => {
   if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
   const booking = req.body;
+  const bookingId = booking.id || `BK${Date.now()}`;
 
   const { data, error } = await supabase.from("bookings").insert([
     {
-      id: booking.id,
+      id: bookingId,
       name: booking.name,
       email: booking.email,
       package: booking.package,
@@ -109,6 +110,161 @@ app.get("/api/bookings", async (req, res) => {
 
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
+});
+
+// --- Profile Endpoints ---
+
+// Create or update profile
+app.post("/api/profiles", async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
+  const profile = req.body;
+
+  const { data, error } = await supabase.from("profiles").insert([
+    {
+      user_id: profile.userId || null,
+      full_name: profile.fullName,
+      email: profile.email,
+      avatar_url: profile.avatarUrl,
+      phone: profile.phone,
+      address: profile.address,
+    },
+  ]).select();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: "Profile saved", data });
+});
+
+// Get profile by email
+app.get("/api/profiles/:email", async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
+  const email = req.params.email;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("email", email)
+    .single();
+
+  if (error && error.code !== "PGRST116") {
+    return res.status(400).json({ error: error.message });
+  }
+  res.json(data || null);
+});
+
+// Update profile
+app.put("/api/profiles/:email", async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
+  const email = req.params.email;
+  const profile = req.body;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({
+      full_name: profile.fullName,
+      avatar_url: profile.avatarUrl,
+      phone: profile.phone,
+      address: profile.address,
+    })
+    .eq("email", email)
+    .select();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: "Profile updated", data });
+});
+
+// --- Package Endpoints ---
+
+// Get all packages
+app.get("/api/packages", async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
+
+  const { data, error } = await supabase.from("packages").select("*");
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+// Get single package
+app.get("/api/packages/:id", async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
+  const id = req.params.id;
+
+  const { data, error } = await supabase
+    .from("packages")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+// Create package
+app.post("/api/packages", async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
+  const pkg = req.body;
+
+  const { data, error } = await supabase.from("packages").insert([
+    {
+      name: pkg.name,
+      destination: pkg.destination,
+      description: pkg.description,
+      price: parseFloat(pkg.price),
+      duration: parseInt(pkg.duration),
+      images: pkg.images || [],
+      highlights: pkg.highlights || [],
+      best_time: pkg.bestTime,
+    },
+  ]).select();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: "Package created", data });
+});
+
+// --- Review Endpoints ---
+
+// Get all reviews
+app.get("/api/reviews", async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
+
+  const { data, error } = await supabase.from("reviews").select("*");
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+// Get reviews by destination
+app.get("/api/reviews/destination/:destination", async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
+  const destination = req.params.destination;
+
+  const { data, error } = await supabase
+    .from("reviews")
+    .select("*")
+    .eq("destination", destination);
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+// Create review
+app.post("/api/reviews", async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
+  const review = req.body;
+
+  const { data, error } = await supabase.from("reviews").insert([
+    {
+      id: review.id || undefined,
+      booking_id: review.bookingId,
+      user_email: review.userEmail,
+      rating: parseInt(review.rating),
+      comment: review.comment,
+      destination: review.destination,
+    },
+  ]).select();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ message: "Review saved", data });
 });
 
 // For Vercel, we export the app

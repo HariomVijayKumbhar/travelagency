@@ -542,22 +542,30 @@ const Payment = {
         });
     },
 
-    processPayment: function(method) {
+    processPayment: async function(method) {
         const submitBtn = method === "Card" ? document.getElementById('cardPayBtn') : document.getElementById('upiPayBtn');
         if (!submitBtn) return;
         submitBtn.disabled = true;
         submitBtn.textContent = "Processing...";
 
-        setTimeout(() => {
+        setTimeout(async () => {
             const pendingBooking = JSON.parse(localStorage.getItem('pendingBooking'));
             if(pendingBooking) {
                 pendingBooking.status = 'Confirmed';
                 pendingBooking.paymentId = 'TXN' + Date.now();
                 pendingBooking.method = method;
                 pendingBooking.date = new Date().toLocaleDateString();
-                Database.Bookings.add(pendingBooking);
-                localStorage.removeItem('pendingBooking');
-                Offer.clearClaimedOffer();
+                try {
+                    await Database.Bookings.add(pendingBooking);
+                    localStorage.removeItem('pendingBooking');
+                    Offer.clearClaimedOffer();
+                } catch (error) {
+                    console.error("Failed to save booking:", error);
+                    alert("Payment was processed, but the booking could not be saved. Please try again.");
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = method === "Card" ? "Pay Now" : "Verify & Confirm";
+                    return;
+                }
             }
             alert(`Payment Successful! Your journey with Maharaja Travels begins now.`);
             window.location.href = "../index.html";
