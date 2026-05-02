@@ -209,6 +209,7 @@ const Profile = {
         }
         this.loadUserData(user);
         this.loadBookings(user.email);
+        this.setupReviewForm();
     },
 
     loadUserData: function(user) {
@@ -252,11 +253,110 @@ const Profile = {
                                     ${booking.status}
                                 </span>
                             </td>
+                            <td>
+                                <button class="btn btn-sm btn-info view-details-btn" data-booking='${JSON.stringify(booking)}' title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
                         </tr>
                     `;
                     tbody.insertAdjacentHTML('beforeend', row);
                 });
+
+                // Add event listeners for view details buttons
+                document.querySelectorAll('.view-details-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const booking = JSON.parse(btn.getAttribute('data-booking'));
+                        Profile.showBookingDetails(booking);
+                    });
+                });
             }
+        });
+    },
+
+    showBookingDetails: function(booking) {
+        document.getElementById('detailBookingId').textContent = booking.id || '-';
+        document.getElementById('detailPackage').textContent = booking.package || '-';
+        document.getElementById('detailDestination').textContent = booking.package || '-';
+        document.getElementById('detailTravelers').textContent = booking.travelers || '-';
+        document.getElementById('detailDate').textContent = booking.date ? new Date(booking.date).toLocaleDateString() : '-';
+        document.getElementById('detailTotal').textContent = booking.total || '-';
+        document.getElementById('detailMethod').textContent = booking.method || 'Pending';
+        document.getElementById('detailStatus').textContent = booking.status || '-';
+        document.getElementById('detailName').textContent = booking.name || '-';
+        document.getElementById('detailEmail').textContent = booking.email || '-';
+        document.getElementById('detailPaymentId').textContent = booking.payment_id || booking.paymentId || '-';
+
+        // Store booking info for review
+        window.currentBookingForReview = booking;
+
+        const modal = new bootstrap.Modal(document.getElementById('bookingDetailsModal'));
+        modal.show();
+    },
+
+    setupReviewForm: function() {
+        const submitBtn = document.getElementById('submitReviewBtn');
+        if (submitBtn) {
+            submitBtn.addEventListener('click', () => Profile.submitReview());
+        }
+
+        const leaveReviewBtn = document.getElementById('leaveReviewBtn');
+        if (leaveReviewBtn) {
+            leaveReviewBtn.addEventListener('click', () => {
+                const booking = window.currentBookingForReview;
+                if (booking) {
+                    document.getElementById('reviewBookingId').value = booking.id || '';
+                    document.getElementById('reviewPackage').value = booking.package || '';
+                    document.getElementById('reviewDestination').value = booking.package || '';
+                    document.getElementById('reviewComment').value = '';
+                    document.querySelectorAll('input[name="rating"]').forEach(r => r.checked = false);
+                }
+            });
+        }
+    },
+
+    submitReview: function() {
+        const bookingId = document.getElementById('reviewBookingId').value;
+        const rating = document.querySelector('input[name="rating"]:checked')?.value;
+        const comment = document.getElementById('reviewComment').value;
+        const booking = window.currentBookingForReview;
+
+        if (!rating) {
+            alert('Please select a rating');
+            return;
+        }
+
+        if (!comment.trim()) {
+            alert('Please write a review');
+            return;
+        }
+
+        const reviewData = {
+            bookingId: bookingId,
+            userEmail: booking.email || Auth.getCurrentUser()?.email,
+            rating: parseInt(rating),
+            comment: comment,
+            destination: booking.package || 'Unknown'
+        };
+
+        fetch('/api/reviews', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(reviewData)
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to submit review');
+            return response.json();
+        })
+        .then(() => {
+            alert('Thank you for your review!');
+            bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
+            // Clear form
+            document.getElementById('reviewForm').reset();
+        })
+        .catch(error => {
+            console.error('Review submission error:', error);
+            alert('Error submitting review: ' + error.message);
         });
     }
 };
