@@ -200,6 +200,8 @@ const Auth = {
 
 // --- Profile Module ---
 const Profile = {
+    currentBooking: null,
+
     init: function() {
         if (!window.location.pathname.includes('profile.html')) return;
         const user = Auth.getCurrentUser();
@@ -209,7 +211,7 @@ const Profile = {
         }
         this.loadUserData(user);
         this.loadBookings(user.email);
-        this.setupReviewForm();
+        this.bindReviewEvents();
     },
 
     loadUserData: function(user) {
@@ -234,28 +236,39 @@ const Profile = {
                 if(noBookingsMsg) noBookingsMsg.classList.add('d-none');
 
                 bookings.forEach(booking => {
+                    const bookingDate = booking.date ? new Date(booking.date).toLocaleDateString() : 'N/A';
+                    const statusColor = booking.status === 'Confirmed' ? 'success' : (booking.status === 'Pending Payment' ? 'warning' : 'danger');
                     const row = `
                         <tr>
                             <td>
-                                <div class="fw-bold">${booking.date ? new Date(booking.date).toLocaleDateString() : 'N/A'}</div>
-                                <small class="text-muted">ID: ${booking.id || '-'}</small>
+                                <small class="text-muted">${booking.id ? booking.id.substring(0, 8) : '-'}</small>
+                            </td>
+                            <td>
+                                <div class="fw-bold">${bookingDate}</div>
                             </td>
                             <td>
                                 <div class="fw-bold text-primary">${booking.package}</div>
-                                <small>${booking.travelers} Travelers</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">${booking.travelers} Person${booking.travelers > 1 ? 's' : ''}</span>
                             </td>
                             <td>
                                 <div class="fw-bold">${booking.total}</div>
+                            </td>
+                            <td>
                                 <small class="text-muted">${booking.method || 'Pending'}</small>
                             </td>
                             <td>
-                                <span class="badge bg-${booking.status === 'Confirmed' ? 'success' : 'warning'} rounded-pill">
+                                <span class="badge bg-${statusColor} rounded-pill">
                                     ${booking.status}
                                 </span>
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-info view-details-btn" data-booking='${JSON.stringify(booking)}' title="View Details">
+                                <button class="btn btn-sm btn-outline-primary view-details-btn" data-booking-id="${booking.id}" title="View Details">
                                     <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning write-review-btn" data-booking-id="${booking.id}" data-package="${booking.package}" title="Write Review">
+                                    <i class="fas fa-star"></i>
                                 </button>
                             </td>
                         </tr>
@@ -263,11 +276,23 @@ const Profile = {
                     tbody.insertAdjacentHTML('beforeend', row);
                 });
 
-                // Add event listeners for view details buttons
+                // Add event listeners to the newly created buttons
                 document.querySelectorAll('.view-details-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
-                        const booking = JSON.parse(btn.getAttribute('data-booking'));
-                        Profile.showBookingDetails(booking);
+                        e.preventDefault();
+                        const bookingId = btn.getAttribute('data-booking-id');
+                        const booking = bookings.find(b => b.id === bookingId);
+                        if(booking) Profile.showBookingDetails(booking);
+                    });
+                });
+
+                document.querySelectorAll('.write-review-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const bookingId = btn.getAttribute('data-booking-id');
+                        const packageName = btn.getAttribute('data-package');
+                        const booking = bookings.find(b => b.id === bookingId);
+                        if(booking) Profile.showReviewModal(booking, packageName);
                     });
                 });
             }
@@ -275,89 +300,158 @@ const Profile = {
     },
 
     showBookingDetails: function(booking) {
-        document.getElementById('detailBookingId').textContent = booking.id || '-';
-        document.getElementById('detailPackage').textContent = booking.package || '-';
-        document.getElementById('detailDestination').textContent = booking.package || '-';
-        document.getElementById('detailTravelers').textContent = booking.travelers || '-';
-        document.getElementById('detailDate').textContent = booking.date ? new Date(booking.date).toLocaleDateString() : '-';
-        document.getElementById('detailTotal').textContent = booking.total || '-';
-        document.getElementById('detailMethod').textContent = booking.method || 'Pending';
-        document.getElementById('detailStatus').textContent = booking.status || '-';
-        document.getElementById('detailName').textContent = booking.name || '-';
-        document.getElementById('detailEmail').textContent = booking.email || '-';
-        document.getElementById('detailPaymentId').textContent = booking.payment_id || booking.paymentId || '-';
-
-        // Store booking info for review
-        window.currentBookingForReview = booking;
-
+        const content = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-secondary">Booking ID</h6>
+                    <p class="fw-bold">${booking.id}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-secondary">Status</h6>
+                    <p><span class="badge bg-${booking.status === 'Confirmed' ? 'success' : 'warning'}">${booking.status}</span></p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-secondary">Package</h6>
+                    <p class="fw-bold">${booking.package}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-secondary">Number of Travelers</h6>
+                    <p class="fw-bold">${booking.travelers}</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-secondary">Travel Date</h6>
+                    <p class="fw-bold">${booking.date ? new Date(booking.date).toLocaleDateString() : 'N/A'}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-secondary">Booking Date</h6>
+                    <p class="fw-bold">${booking.created_at ? new Date(booking.created_at).toLocaleDateString() : 'N/A'}</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-secondary">Total Amount</h6>
+                    <p class="fw-bold h5 text-primary">${booking.total}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-secondary">Payment Method</h6>
+                    <p class="fw-bold">${booking.method || 'Pending'}</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <h6 class="text-secondary">Guest Information</h6>
+                    <p class="fw-bold">${booking.name}</p>
+                    <p class="text-muted">${booking.email}</p>
+                </div>
+            </div>
+            ${booking.payment_id ? `
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="text-secondary">Payment ID</h6>
+                        <p class="fw-bold">${booking.payment_id}</p>
+                    </div>
+                </div>
+            ` : ''}
+        `;
+        
+        document.getElementById('bookingDetailsContent').innerHTML = content;
         const modal = new bootstrap.Modal(document.getElementById('bookingDetailsModal'));
         modal.show();
     },
 
-    setupReviewForm: function() {
-        const submitBtn = document.getElementById('submitReviewBtn');
-        if (submitBtn) {
-            submitBtn.addEventListener('click', () => Profile.submitReview());
-        }
+    showReviewModal: function(booking, packageName) {
+        Profile.currentBooking = booking;
+        document.getElementById('reviewDestination').value = packageName;
+        document.getElementById('reviewRating').value = '0';
+        document.getElementById('reviewComment').value = '';
+        document.querySelectorAll('.star').forEach(star => star.classList.remove('active'));
+        
+        const modal = new bootstrap.Modal(document.getElementById('reviewModal'));
+        modal.show();
+    },
 
-        const leaveReviewBtn = document.getElementById('leaveReviewBtn');
-        if (leaveReviewBtn) {
-            leaveReviewBtn.addEventListener('click', () => {
-                const booking = window.currentBookingForReview;
-                if (booking) {
-                    document.getElementById('reviewBookingId').value = booking.id || '';
-                    document.getElementById('reviewPackage').value = booking.package || '';
-                    document.getElementById('reviewDestination').value = booking.package || '';
-                    document.getElementById('reviewComment').value = '';
-                    document.querySelectorAll('input[name="rating"]').forEach(r => r.checked = false);
+    bindReviewEvents: function() {
+        const ratingStars = document.querySelectorAll('#ratingStars .star');
+        ratingStars.forEach(star => {
+            star.addEventListener('click', function() {
+                const rating = this.getAttribute('data-rating');
+                document.getElementById('reviewRating').value = rating;
+                ratingStars.forEach((s, index) => {
+                    if(index < rating) {
+                        s.classList.add('active');
+                    } else {
+                        s.classList.remove('active');
+                    }
+                });
+            });
+            
+            star.addEventListener('mouseenter', function() {
+                const hoverRating = this.getAttribute('data-rating');
+                ratingStars.forEach((s, index) => {
+                    if(index < hoverRating) {
+                        s.style.color = '#ffc107';
+                    } else {
+                        s.style.color = '#ddd';
+                    }
+                });
+            });
+        });
+
+        document.getElementById('ratingStars').addEventListener('mouseleave', function() {
+            const currentRating = document.getElementById('reviewRating').value;
+            ratingStars.forEach((s, index) => {
+                if(index < currentRating) {
+                    s.style.color = '#ffc107';
+                } else {
+                    s.style.color = '#ddd';
+                }
+            });
+        });
+
+        const reviewForm = document.getElementById('reviewForm');
+        if(reviewForm) {
+            reviewForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const rating = document.getElementById('reviewRating').value;
+                if(!rating || rating === '0') {
+                    alert('Please select a rating');
+                    return;
+                }
+
+                const review = {
+                    bookingId: Profile.currentBooking.id,
+                    userEmail: Profile.currentBooking.email,
+                    rating: parseInt(rating),
+                    comment: document.getElementById('reviewComment').value,
+                    destination: document.getElementById('reviewDestination').value
+                };
+
+                try {
+                    const response = await fetch('/api/reviews', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(review)
+                    });
+
+                    const result = await response.json();
+                    
+                    if(response.ok) {
+                        alert('Thank you for your review!');
+                        bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
+                    } else {
+                        alert('Failed to submit review: ' + (result.error || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Review submission error:', error);
+                    alert('An error occurred while submitting your review.');
                 }
             });
         }
-    },
-
-    submitReview: function() {
-        const bookingId = document.getElementById('reviewBookingId').value;
-        const rating = document.querySelector('input[name="rating"]:checked')?.value;
-        const comment = document.getElementById('reviewComment').value;
-        const booking = window.currentBookingForReview;
-
-        if (!rating) {
-            alert('Please select a rating');
-            return;
-        }
-
-        if (!comment.trim()) {
-            alert('Please write a review');
-            return;
-        }
-
-        const reviewData = {
-            bookingId: bookingId,
-            userEmail: booking.email || Auth.getCurrentUser()?.email,
-            rating: parseInt(rating),
-            comment: comment,
-            destination: booking.package || 'Unknown'
-        };
-
-        fetch('/api/reviews', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(reviewData)
-        })
-        .then(response => {
-            if (!response.ok) throw new Error('Failed to submit review');
-            return response.json();
-        })
-        .then(() => {
-            alert('Thank you for your review!');
-            bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
-            // Clear form
-            document.getElementById('reviewForm').reset();
-        })
-        .catch(error => {
-            console.error('Review submission error:', error);
-            alert('Error submitting review: ' + error.message);
-        });
     }
 };
 
