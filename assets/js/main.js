@@ -752,6 +752,8 @@ const Booking = {
                 if (bookingModalEl) {
                     const bookingModal = new bootstrap.Modal(bookingModalEl);
                     bookingModal.show();
+                    // Validate form after modal opens so prefilled fields enable submit
+                    try { this.validateBookingForm(); } catch (e) { console.error('Validation after open failed', e); }
                 }
             });
         });
