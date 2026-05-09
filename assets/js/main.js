@@ -681,7 +681,17 @@ const Booking = {
 
         // Sanitize email to remove invisible/control characters and trim
         if (fields.email && typeof fields.email.value === 'string') {
-            fields.email.value = this.sanitizeEmail(fields.email.value);
+            const rawEmail = fields.email.value;
+            const cleaned = this.sanitizeEmail(rawEmail);
+            // DEBUG: log raw vs cleaned and validity for troubleshooting
+            console.debug('[Booking] Email raw:', JSON.stringify(rawEmail));
+            console.debug('[Booking] Email cleaned:', JSON.stringify(cleaned));
+            fields.email.value = cleaned;
+            try {
+                console.debug('[Booking] email.checkValidity():', fields.email.checkValidity());
+            } catch (e) {
+                console.debug('[Booking] email.checkValidity() threw', e);
+            }
         }
 
         if (fields.phone) this.sanitizePhoneInput(fields.phone);
