@@ -598,17 +598,6 @@ const Booking = {
         return this.getLocalDateValue(shifted);
     },
 
-    sanitizeEmail: function (raw) {
-        if (!raw) return "";
-        // Trim spaces and remove control / zero-width characters
-        let s = raw.trim();
-        // Remove Unicode zero-width and control characters
-        s = s.replace(/[\u0000-\u001F\u007F\u200B-\u200F\uFEFF]/g, "");
-        // Also replace multiple spaces with single space (though spaces invalid in email)
-        s = s.replace(/\s+/g, "");
-        return s;
-    },
-
     sanitizePhoneInput: function (input) {
         if (!input) return;
         const digitsOnly = input.value.replace(/\D/g, "").slice(0, 10);
@@ -679,38 +668,6 @@ const Booking = {
         const travelersValue = parseInt(fields.travelers?.value, 10);
         const phoneDigits = (fields.phone?.value || "").replace(/\D/g, "");
 
-        // Sanitize email to remove invisible/control characters and trim
-        if (fields.email && typeof fields.email.value === 'string') {
-            const rawEmail = fields.email.value;
-            const cleaned = this.sanitizeEmail(rawEmail);
-            // DEBUG: log raw vs cleaned and validity for troubleshooting
-            console.debug('[Booking] Email raw:', JSON.stringify(rawEmail));
-            console.debug('[Booking] Email cleaned:', JSON.stringify(cleaned));
-            fields.email.value = cleaned;
-            try {
-                console.debug('[Booking] email.checkValidity():', fields.email.checkValidity());
-            } catch (e) {
-                console.debug('[Booking] email.checkValidity() threw', e);
-            }
-            // Visible debug helper for users without DevTools open
-            try {
-                const debugId = 'emailDebug';
-                let debugEl = document.getElementById(debugId);
-                if (!debugEl) {
-                    debugEl = document.createElement('div');
-                    debugEl.id = debugId;
-                    debugEl.className = 'form-text text-muted small';
-                    // Place after booking-feedback if present, otherwise directly after input
-                    if (fields.email.nextElementSibling && fields.email.nextElementSibling.classList && fields.email.nextElementSibling.classList.contains('booking-feedback')) {
-                        fields.email.nextElementSibling.insertAdjacentElement('afterend', debugEl);
-                    } else {
-                        fields.email.insertAdjacentElement('afterend', debugEl);
-                    }
-                }
-                debugEl.textContent = `raw: ${JSON.stringify(rawEmail)} | cleaned: ${JSON.stringify(cleaned)} | valid: ${fields.email.checkValidity()}`;
-            } catch (err) { console.debug('Failed to update visible email debug element', err); }
-        }
-
         if (fields.phone) this.sanitizePhoneInput(fields.phone);
 
         const validations = [
@@ -718,11 +675,6 @@ const Booking = {
                 input: fields.name,
                 valid: !!fields.name?.value.trim(),
                 message: "Enter your full name.",
-            },
-            {
-                input: fields.email,
-                valid: !!fields.email?.value && fields.email.checkValidity(),
-                message: "Enter a valid email address.",
             },
             {
                 input: fields.phone,
@@ -795,8 +747,6 @@ const Booking = {
                 if (bookingModalEl) {
                     const bookingModal = new bootstrap.Modal(bookingModalEl);
                     bookingModal.show();
-                    // Validate form after modal opens so prefilled fields enable submit
-                    try { this.validateBookingForm(); } catch (e) { console.error('Validation after open failed', e); }
                 }
             });
         });
@@ -1035,28 +985,12 @@ document.addEventListener("DOMContentLoaded", () => {
             try { Profile.init(); } catch (e) {}
             try { UI.init(); } catch (e) {}
             
-            // Only intercept contact forms (avoid blocking other form submissions)
-            const contactForms = document.querySelectorAll("section.contact form, section.contact-form form, form.contact-form");
-            contactForms.forEach(form => {
+            const forms = document.querySelectorAll("form:not(#bookingForm):not(#paymentForm):not(#upiForm):not(#loginPageForm):not(#registerPageForm)");
+            forms.forEach(form => {
                 form.addEventListener("submit", (e) => {
                     e.preventDefault();
-                    try {
-                        const submitBtn = form.querySelector('button[type="submit"]');
-                        if (submitBtn) {
-                            submitBtn.disabled = true;
-                            submitBtn.textContent = "Sending...";
-                        }
-                        // simple feedback for contact forms
-                        const feedback = document.createElement('div');
-                        feedback.className = 'alert alert-success mt-3';
-                        feedback.textContent = 'Message Sent! We will get back to you soon.';
-                        form.appendChild(feedback);
-                        form.reset();
-                        setTimeout(() => {
-                            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Send Message'; }
-                            feedback.remove();
-                        }, 3000);
-                    } catch (err) { console.error('Contact form handler error', err); }
+                    alert("Message Sent! We will get back to you soon.");
+                    form.reset();
                 });
             });
         });
