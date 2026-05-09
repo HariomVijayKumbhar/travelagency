@@ -992,12 +992,28 @@ document.addEventListener("DOMContentLoaded", () => {
             try { Profile.init(); } catch (e) {}
             try { UI.init(); } catch (e) {}
             
-            const forms = document.querySelectorAll("form:not(#bookingForm):not(#paymentForm):not(#upiForm):not(#loginPageForm):not(#registerPageForm)");
-            forms.forEach(form => {
+            // Only intercept contact forms (avoid blocking other form submissions)
+            const contactForms = document.querySelectorAll("section.contact form, section.contact-form form, form.contact-form");
+            contactForms.forEach(form => {
                 form.addEventListener("submit", (e) => {
                     e.preventDefault();
-                    alert("Message Sent! We will get back to you soon.");
-                    form.reset();
+                    try {
+                        const submitBtn = form.querySelector('button[type="submit"]');
+                        if (submitBtn) {
+                            submitBtn.disabled = true;
+                            submitBtn.textContent = "Sending...";
+                        }
+                        // simple feedback for contact forms
+                        const feedback = document.createElement('div');
+                        feedback.className = 'alert alert-success mt-3';
+                        feedback.textContent = 'Message Sent! We will get back to you soon.';
+                        form.appendChild(feedback);
+                        form.reset();
+                        setTimeout(() => {
+                            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Send Message'; }
+                            feedback.remove();
+                        }, 3000);
+                    } catch (err) { console.error('Contact form handler error', err); }
                 });
             });
         });
