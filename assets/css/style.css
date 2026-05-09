@@ -36,6 +36,36 @@ body {
     transition: background-color 0.3s, color 0.3s;
 }
 
+.modal .form-control.is-valid,
+.modal .form-select.is-valid {
+    border-color: #198754;
+    box-shadow: 0 0 0 0.15rem rgba(25, 135, 84, 0.12);
+}
+
+.modal .form-control.is-invalid,
+.modal .form-select.is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.15rem rgba(220, 53, 69, 0.12);
+}
+
+.modal .form-control.is-valid:focus,
+.modal .form-select.is-valid:focus {
+    border-color: #198754;
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.18);
+}
+
+.modal .form-control.is-invalid:focus,
+.modal .form-select.is-invalid:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.18);
+}
+
+.booking-feedback {
+    min-height: 1rem;
+    margin-top: 0.35rem;
+    font-size: 0.85rem;
+}
+
 /* Top Bar */
 .top-bar {
     background: var(--primary-color);

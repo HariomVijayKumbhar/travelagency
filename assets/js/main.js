@@ -83,10 +83,11 @@ const Auth = {
         }
 
         try {
+            const redirectTo = `${window.location.origin}/pages/login.html`;
             const response = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password })
+                body: JSON.stringify({ name, email, password, redirectTo })
             });
 
             const result = await response.json();
@@ -509,15 +510,214 @@ const Booking = {
     discountRate: 0,
     isDiscountApplied: false,
     appliedOffer: null,
+    formState: {
+        submitted: false,
+    },
 
     init: function () {
         this.bindEvents();
+        this.setupValidation();
         const claimed = Offer.getClaimedOffer();
         if (claimed) {
             this.appliedOffer = claimed;
             this.discountRate = claimed.discount / 100;
             this.isDiscountApplied = true;
         }
+    },
+
+    setupValidation: function () {
+        const form = document.getElementById("bookingForm");
+        if (!form) return;
+
+        this.bookingForm = form;
+        this.bookingSubmitBtn = form.querySelector('button[type="submit"]');
+        this.bookingFields = {
+            name: document.getElementById("name"),
+            email: document.getElementById("email"),
+            phone: document.getElementById("phone"),
+            travelers: document.getElementById("travelers"),
+            checkin: document.getElementById("checkin"),
+            checkout: document.getElementById("checkout"),
+            package: document.getElementById("package"),
+        };
+
+        const phoneInput = this.bookingFields.phone;
+        if (phoneInput) {
+            phoneInput.type = "text";
+            phoneInput.inputMode = "numeric";
+            phoneInput.autocomplete = "tel";
+            phoneInput.maxLength = 10;
+            phoneInput.placeholder = "Enter 10-digit mobile number";
+        }
+
+        this.ensureBookingFeedback(this.bookingFields.phone);
+        this.ensureBookingFeedback(this.bookingFields.checkin);
+        this.ensureBookingFeedback(this.bookingFields.checkout);
+
+        this.syncDateConstraints();
+
+        const markTouched = (event) => {
+            if (event.target && event.target.classList) {
+                event.target.dataset.touched = "true";
+            }
+        };
+
+        form.addEventListener("input", (event) => {
+            markTouched(event);
+            if (event.target && event.target.id === "phone") {
+                this.sanitizePhoneInput(event.target);
+            }
+            if (event.target && event.target.id === "checkin") {
+                this.syncDateConstraints();
+            }
+            this.validateBookingForm();
+        });
+
+        form.addEventListener("change", (event) => {
+            markTouched(event);
+            if (event.target && event.target.id === "checkin") {
+                this.syncDateConstraints();
+            }
+            this.validateBookingForm();
+        });
+
+        this.validateBookingForm();
+    },
+
+    getLocalDateValue: function (date = new Date()) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    },
+
+    shiftDateValue: function (dateValue, days) {
+        if (!dateValue) return "";
+        const shifted = new Date(`${dateValue}T00:00:00`);
+        shifted.setDate(shifted.getDate() + days);
+        return this.getLocalDateValue(shifted);
+    },
+
+    sanitizePhoneInput: function (input) {
+        if (!input) return;
+        const digitsOnly = input.value.replace(/\D/g, "").slice(0, 10);
+        if (input.value !== digitsOnly) {
+            input.value = digitsOnly;
+        }
+    },
+
+    ensureBookingFeedback: function (input) {
+        if (!input || input.nextElementSibling?.classList?.contains("booking-feedback")) return;
+        const feedback = document.createElement("div");
+        feedback.className = "invalid-feedback booking-feedback";
+        feedback.setAttribute("aria-live", "polite");
+        input.insertAdjacentElement("afterend", feedback);
+    },
+
+    setFieldState: function (input, isValid, message) {
+        if (!input) return;
+        const shouldShowState = input.dataset.touched === "true" || this.formState.submitted;
+        const feedback = input.nextElementSibling?.classList?.contains("booking-feedback")
+            ? input.nextElementSibling
+            : null;
+
+        input.setCustomValidity(isValid ? "" : (message || "Invalid value"));
+
+        if (!shouldShowState) {
+            input.classList.remove("is-valid", "is-invalid");
+            if (feedback) feedback.textContent = "";
+            return;
+        }
+
+        input.classList.toggle("is-valid", isValid);
+        input.classList.toggle("is-invalid", !isValid);
+
+        if (feedback) {
+            feedback.textContent = isValid ? "" : message;
+        }
+    },
+
+    syncDateConstraints: function () {
+        const checkinInput = this.bookingFields?.checkin;
+        const checkoutInput = this.bookingFields?.checkout;
+        if (!checkinInput || !checkoutInput) return;
+
+        const today = this.getLocalDateValue();
+        checkinInput.min = today;
+
+        if (checkinInput.value && checkinInput.value < today) {
+            checkinInput.value = today;
+        }
+
+        const nextAllowedCheckout = checkinInput.value
+            ? this.shiftDateValue(checkinInput.value, 1)
+            : this.shiftDateValue(today, 1);
+
+        checkoutInput.min = nextAllowedCheckout;
+
+        if (checkoutInput.value && checkoutInput.value <= (checkinInput.value || today)) {
+            checkoutInput.value = nextAllowedCheckout;
+        }
+    },
+
+    validateBookingForm: function () {
+        const fields = this.bookingFields || {};
+        const today = this.getLocalDateValue();
+        const checkinValue = fields.checkin?.value || "";
+        const checkoutValue = fields.checkout?.value || "";
+        const travelersValue = parseInt(fields.travelers?.value, 10);
+        const phoneDigits = (fields.phone?.value || "").replace(/\D/g, "");
+
+        if (fields.phone) this.sanitizePhoneInput(fields.phone);
+
+        const validations = [
+            {
+                input: fields.name,
+                valid: !!fields.name?.value.trim(),
+                message: "Enter your full name.",
+            },
+            {
+                input: fields.email,
+                valid: !!fields.email?.value && fields.email.checkValidity(),
+                message: "Enter a valid email address.",
+            },
+            {
+                input: fields.phone,
+                valid: phoneDigits.length === 10,
+                message: "Phone number must be exactly 10 digits.",
+            },
+            {
+                input: fields.travelers,
+                valid: Number.isInteger(travelersValue) && travelersValue >= 1,
+                message: "Enter at least 1 traveler.",
+            },
+            {
+                input: fields.package,
+                valid: !!fields.package?.value,
+                message: "Select a package.",
+            },
+            {
+                input: fields.checkin,
+                valid: !!checkinValue && checkinValue >= today,
+                message: "Check-in date cannot be in the past.",
+            },
+            {
+                input: fields.checkout,
+                valid: !!checkoutValue && !!checkinValue && checkoutValue > checkinValue,
+                message: "Check-out date must be after check-in date.",
+            },
+        ];
+
+        validations.forEach(({ input, valid, message }) => {
+            this.setFieldState(input, valid, message);
+        });
+
+        const isFormValid = validations.every((entry) => entry.valid);
+        if (this.bookingSubmitBtn) {
+            this.bookingSubmitBtn.disabled = !isFormValid;
+        }
+
+        return isFormValid;
     },
 
     bindEvents: function () {
@@ -565,6 +765,16 @@ const Booking = {
         if (bookingForm) {
             bookingForm.addEventListener("submit", (e) => {
                 e.preventDefault();
+                this.formState.submitted = true;
+
+                if (!this.validateBookingForm()) {
+                    const firstInvalid = bookingForm.querySelector(".is-invalid");
+                    if (firstInvalid && typeof firstInvalid.focus === "function") {
+                        firstInvalid.focus();
+                    }
+                    return;
+                }
+
                 const packageSelect = document.getElementById("package");
                 const travelersInput = document.getElementById("travelers");
                 const totalSpan = document.getElementById("totalAmount");

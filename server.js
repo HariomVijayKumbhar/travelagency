@@ -36,13 +36,14 @@ const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabase
 // Register
 app.post("/api/auth/register", async (req, res) => {
   if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
-  const { email, password, name } = req.body;
+  const { email, password, name, redirectTo } = req.body;
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: { full_name: name },
+      emailRedirectTo: redirectTo,
     },
   });
 
