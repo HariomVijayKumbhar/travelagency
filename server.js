@@ -38,14 +38,18 @@ app.post("/api/auth/register", async (req, res) => {
   if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
   const { email, password, name, redirectTo } = req.body;
 
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
+  // Try the two-argument signUp form (credentials, options).
+  // Include both `redirectTo` and `emailRedirectTo` to support different
+  // supabase-js versions / API shapes so the confirmation email returns
+  // to the provided URL.
+  const { data, error } = await supabase.auth.signUp(
+    { email, password },
+    {
       data: { full_name: name },
+      redirectTo: redirectTo,
       emailRedirectTo: redirectTo,
-    },
-  });
+    }
+  );
 
   if (error) return res.status(400).json({ error: error.message });
   res.json({ message: "Registration successful", user: data.user });
