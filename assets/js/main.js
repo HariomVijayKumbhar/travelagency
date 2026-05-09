@@ -692,6 +692,23 @@ const Booking = {
             } catch (e) {
                 console.debug('[Booking] email.checkValidity() threw', e);
             }
+            // Visible debug helper for users without DevTools open
+            try {
+                const debugId = 'emailDebug';
+                let debugEl = document.getElementById(debugId);
+                if (!debugEl) {
+                    debugEl = document.createElement('div');
+                    debugEl.id = debugId;
+                    debugEl.className = 'form-text text-muted small';
+                    // Place after booking-feedback if present, otherwise directly after input
+                    if (fields.email.nextElementSibling && fields.email.nextElementSibling.classList && fields.email.nextElementSibling.classList.contains('booking-feedback')) {
+                        fields.email.nextElementSibling.insertAdjacentElement('afterend', debugEl);
+                    } else {
+                        fields.email.insertAdjacentElement('afterend', debugEl);
+                    }
+                }
+                debugEl.textContent = `raw: ${JSON.stringify(rawEmail)} | cleaned: ${JSON.stringify(cleaned)} | valid: ${fields.email.checkValidity()}`;
+            } catch (err) { console.debug('Failed to update visible email debug element', err); }
         }
 
         if (fields.phone) this.sanitizePhoneInput(fields.phone);
