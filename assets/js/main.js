@@ -598,6 +598,17 @@ const Booking = {
         return this.getLocalDateValue(shifted);
     },
 
+    sanitizeEmail: function (raw) {
+        if (!raw) return "";
+        // Trim spaces and remove control / zero-width characters
+        let s = raw.trim();
+        // Remove Unicode zero-width and control characters
+        s = s.replace(/[\u0000-\u001F\u007F\u200B-\u200F\uFEFF]/g, "");
+        // Also replace multiple spaces with single space (though spaces invalid in email)
+        s = s.replace(/\s+/g, "");
+        return s;
+    },
+
     sanitizePhoneInput: function (input) {
         if (!input) return;
         const digitsOnly = input.value.replace(/\D/g, "").slice(0, 10);
@@ -667,6 +678,11 @@ const Booking = {
         const checkoutValue = fields.checkout?.value || "";
         const travelersValue = parseInt(fields.travelers?.value, 10);
         const phoneDigits = (fields.phone?.value || "").replace(/\D/g, "");
+
+        // Sanitize email to remove invisible/control characters and trim
+        if (fields.email && typeof fields.email.value === 'string') {
+            fields.email.value = this.sanitizeEmail(fields.email.value);
+        }
 
         if (fields.phone) this.sanitizePhoneInput(fields.phone);
 
